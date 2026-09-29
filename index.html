@@ -1,0 +1,602 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Quanto Sobra</title>
+<style>
+:root{
+  --bg:#f6f5f2; --card:#ffffff; --ink:#1c1b19; --muted:#6b6660;
+  --line:#e7e3dc; --accent:#2f6f4f; --accent-ink:#eafaf1;
+  --warn:#b5541c; --warn-ink:#fdf0e6; --bad:#a3312c;
+  --fixo:#5c6bc0; --variavel:#c9862a; --extra:#a3312c;
+  --radius:14px;
+  box-sizing:border-box;
+  padding-top:env(safe-area-inset-top,0px);
+  padding-bottom:env(safe-area-inset-bottom,0px);
+}
+@media (prefers-color-scheme: dark){
+  :root:not([data-theme="light"]){
+    --bg:#17160f; --card:#211f18; --ink:#f1efe8; --muted:#a9a296;
+    --line:#39362c; --accent:#4caf7d; --accent-ink:#0f2a1c;
+    --warn:#e08a4c; --warn-ink:#2a1c0f; --bad:#e2685f;
+  }
+}
+:root[data-theme="dark"]{
+  --bg:#17160f; --card:#211f18; --ink:#f1efe8; --muted:#a9a296;
+  --line:#39362c; --accent:#4caf7d; --accent-ink:#0f2a1c;
+  --warn:#e08a4c; --warn-ink:#2a1c0f; --bad:#e2685f;
+}
+html{scroll-padding-top:env(safe-area-inset-top,0px);}
+*{box-sizing:border-box;}
+body{
+  margin:0; background:var(--bg); color:var(--ink);
+  font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,Helvetica,Arial,sans-serif;
+  padding:14px 12px calc(80px + env(safe-area-inset-bottom,0px)); max-width:720px; margin-inline:auto;
+  overflow-x:hidden;
+}
+h1{font-size:1.15rem; margin:6px 0 12px;}
+.monthbar{display:flex; gap:8px; align-items:center; margin-bottom:12px;}
+.monthbar select{
+  flex:1; min-width:0; border:1px solid var(--line); background:var(--card); color:var(--ink);
+  border-radius:10px; padding:9px 10px; font-size:0.85rem; font-family:inherit;
+}
+.newmonth-btn{white-space:nowrap; background:var(--accent); color:#fff; border:none; border-radius:10px; padding:9px 12px; font-size:0.78rem; cursor:pointer; flex:none;}
+.newmonth-form{display:flex; gap:6px; margin-bottom:12px; flex-wrap:wrap; background:var(--card); border:1px solid var(--line); border-radius:var(--radius); padding:10px;}
+.newmonth-form .hint2{font-size:0.72rem; color:var(--muted); width:100%;}
+.newmonth-form input{flex:1; min-width:120px; border:1px solid var(--line); background:var(--bg); color:var(--ink); border-radius:8px; padding:8px 10px; font-size:0.85rem; font-family:inherit;}
+.newmonth-form button{border:none; border-radius:8px; padding:8px 12px; font-size:0.8rem; cursor:pointer;}
+.newmonth-form button.create{background:var(--accent); color:#fff;}
+.newmonth-form button.cancel{background:none; color:var(--muted);}
+
+.screen{display:none;}
+.screen.active{display:block;}
+
+.hero{background:var(--card); border:1px solid var(--line); border-radius:var(--radius); padding:22px 16px; text-align:center; margin-bottom:14px;}
+.hero .l{font-size:0.78rem; color:var(--muted); text-transform:uppercase; letter-spacing:.03em;}
+.hero .v{font-size:2.3rem; font-weight:800; margin-top:4px;}
+.hero.pos .v{color:var(--accent);}
+.hero.neg .v{color:var(--bad);}
+.hero .hint{font-size:0.74rem; color:var(--muted); margin-top:8px;}
+
+.cards{display:grid; grid-template-columns:1fr 1fr; gap:8px; margin-bottom:16px;}
+.stat{background:var(--card); border:1px solid var(--line); border-radius:var(--radius); padding:10px 12px;}
+.stat .l{font-size:0.7rem; color:var(--muted); text-transform:uppercase; letter-spacing:.02em;}
+.stat .v{font-size:1.05rem; font-weight:700; margin-top:2px;}
+
+section{margin-bottom:20px; min-width:0;}
+.sechead{display:flex; align-items:center; justify-content:space-between; margin-bottom:8px;}
+.sechead h2{font-size:0.95rem; margin:0; text-transform:uppercase; letter-spacing:.03em; color:var(--muted);}
+.sechead .tot{font-size:0.85rem; font-weight:600;}
+.grouphead{display:flex; align-items:center; gap:6px; margin:10px 0 6px; font-size:0.8rem; font-weight:700; color:var(--muted); text-transform:uppercase;}
+.dot{width:8px; height:8px; border-radius:50%;}
+
+.item{background:var(--card); border:1px solid var(--line); border-radius:var(--radius); margin-bottom:6px; min-width:0; overflow:hidden;}
+.citem{display:flex; align-items:center; gap:8px; padding:9px 12px; cursor:pointer; min-width:0;}
+.citem .cdot{width:8px; height:8px; border-radius:50%; flex:none;}
+.citem .cdesc{flex:1 1 auto; min-width:0; font-weight:600; font-size:0.86rem; white-space:nowrap; overflow:hidden; text-overflow:ellipsis;}
+.citem .cvals{flex:none; font-size:0.76rem; color:var(--muted); white-space:nowrap;}
+.citem .cfalta{flex:none; font-size:0.72rem; font-weight:700; padding:1px 7px; border-radius:20px; white-space:nowrap;}
+.citem .cfalta.ok{background:var(--accent-ink); color:var(--accent);}
+.citem .cfalta.pend{background:var(--warn-ink); color:var(--warn);}
+.citem .cchev{color:var(--muted); font-size:0.7rem; flex:none;}
+.expanded-body{padding:0 12px 10px;}
+.row{display:flex; gap:8px; margin-top:6px; flex-wrap:wrap;}
+.field{display:flex; flex-direction:column; gap:2px; flex:1; min-width:70px;}
+.field label{font-size:0.65rem; color:var(--muted); text-transform:uppercase;}
+.field input, .field select{
+  border:1px solid var(--line); background:var(--bg); color:var(--ink); border-radius:8px;
+  padding:6px 7px; font-size:0.85rem; width:100%; font-family:inherit;
+}
+.field.wide{flex:2;}
+.del{background:none; border:none; color:var(--bad); font-size:0.8rem; cursor:pointer; padding:6px 2px; line-height:1;}
+.add-btn{
+  display:block; width:100%; padding:9px; border-radius:10px; border:1px dashed var(--line);
+  background:none; color:var(--muted); font-size:0.85rem; cursor:pointer; margin-top:4px;
+}
+.add-btn:active{background:var(--card);}
+
+.catbar-wrap{background:var(--card); border:1px solid var(--line); border-radius:var(--radius); padding:12px;}
+.catbar-row{margin-bottom:10px;}
+.catbar-row:last-child{margin-bottom:0;}
+.catbar-label{display:flex; justify-content:space-between; font-size:0.82rem; margin-bottom:4px;}
+.catbar-label .cat{font-weight:600;}
+.catbar-label .val{color:var(--muted);}
+.catbar-track{background:var(--bg); border-radius:6px; height:10px; overflow:hidden;}
+.catbar-fill{height:100%; border-radius:6px; background:var(--accent);}
+
+.resetbar{display:flex; justify-content:center; margin-top:6px;}
+.resetbtn{background:none; border:none; color:var(--muted); font-size:0.72rem; text-decoration:underline; cursor:pointer;}
+.resetconfirm{display:flex; align-items:center; gap:8px; font-size:0.75rem; flex-wrap:wrap; justify-content:center; text-align:center;}
+.resetconfirm .yes{color:var(--bad); font-weight:700; background:none; border:none; cursor:pointer; text-decoration:underline;}
+.resetconfirm .no{color:var(--muted); background:none; border:none; cursor:pointer;}
+
+.bottomnav{
+  position:fixed; left:0; right:0; bottom:0; z-index:10;
+  display:flex; justify-content:space-around; align-items:center;
+  background:var(--card); border-top:1px solid var(--line);
+  padding:6px 4px calc(6px + env(safe-area-inset-bottom,0px));
+}
+.bottomnav button{
+  background:none; border:none; color:var(--muted); font-size:0.64rem;
+  display:flex; flex-direction:column; align-items:center; gap:2px; padding:4px 10px; cursor:pointer; flex:1;
+}
+.bottomnav button .ic{font-size:1.2rem;}
+.bottomnav button.active{color:var(--accent);}
+</style>
+</head>
+<body>
+
+<h1>Quanto Sobra 💰</h1>
+
+<div class="monthbar">
+  <select id="monthSelect" onchange="switchMonth(this.value)"></select>
+  <button class="newmonth-btn" onclick="openNewMonth()">+ novo mês</button>
+</div>
+<div class="newmonth-form" id="newMonthForm" style="display:none">
+  <div class="hint2">Cria um mês novo copiando os lançamentos (zerando gasto) e os saldos das contas. Receitas começam vazias.</div>
+  <input id="newMonthLabel" placeholder="Nome do mês (ex: Outubro 2026)">
+  <button class="create" onclick="createNewMonth()">Criar</button>
+  <button class="cancel" onclick="closeNewMonth()">Cancelar</button>
+</div>
+
+<div class="screen active" id="screen-resumo">
+  <div class="hero" id="heroSobra"></div>
+  <div class="cards" id="statCards"></div>
+  <section>
+    <div class="sechead"><h2>Gastos por categoria</h2></div>
+    <div class="catbar-wrap" id="categorias"></div>
+  </section>
+  <div class="resetbar" id="resetbar"></div>
+</div>
+
+<div class="screen" id="screen-lancamentos">
+  <section>
+    <div class="sechead"><h2>Lançamentos do mês</h2><div class="tot" id="lancTot"></div></div>
+    <div id="lancamentos"></div>
+  </section>
+</div>
+
+<div class="screen" id="screen-contas">
+  <section>
+    <div class="sechead"><h2>Dinheiro — onde está</h2><div class="tot" id="dinheiroTot"></div></div>
+    <div id="dinheiro"></div>
+    <button class="add-btn" onclick="addDinheiro()">+ adicionar local</button>
+  </section>
+</div>
+
+<div class="screen" id="screen-receitas">
+  <section>
+    <div class="sechead"><h2>Receitas</h2><div class="tot" id="receitasTot"></div></div>
+    <div id="receitas"></div>
+    <button class="add-btn" onclick="addReceita()">+ adicionar receita</button>
+  </section>
+</div>
+
+<nav class="bottomnav">
+  <button data-screen="resumo" class="active" onclick="setScreen('resumo')"><span class="ic">🏠</span><span>Resumo</span></button>
+  <button data-screen="lancamentos" onclick="setScreen('lancamentos')"><span class="ic">📋</span><span>Lançamentos</span></button>
+  <button data-screen="contas" onclick="setScreen('contas')"><span class="ic">💳</span><span>Contas</span></button>
+  <button data-screen="receitas" onclick="setScreen('receitas')"><span class="ic">📈</span><span>Receitas</span></button>
+</nav>
+
+<script>
+const STORAGE_KEY = 'quantoSobra_app_v2';
+const MESES_PT = ['janeiro','fevereiro','março','abril','maio','junho','julho','agosto','setembro','outubro','novembro','dezembro'];
+
+const INITIAL = {
+  currentMonthKey: 'set2026',
+  months: {
+    set2026: {
+      label: 'Setembro 2026',
+      updatedAt: '2026-09-25',
+      lancamentos: [
+        {id:1,section:'Fixas',status:'Pago',previsto:460,gasto:460,desc:'Dízimo ⛪',categoria:'Doação',dia:'1',pagamento:'Transferência',obs:'Bruto: R$ 5.955,53'},
+        {id:2,section:'Fixas',status:'Pago',previsto:197.79,gasto:197.79,desc:'Água 💧',categoria:'Casa',dia:'13/23',pagamento:'Transferência',obs:'Emite 13 / vence 23'},
+        {id:3,section:'Fixas',status:'Pago',previsto:300.87,gasto:300.87,desc:'Luz ⚡',categoria:'Casa',dia:'3/24',pagamento:'Transferência',obs:'Emite 3 / vence 24'},
+        {id:4,section:'Fixas',status:'Pago',previsto:25,gasto:25,desc:'Limpeza da rua🧹',categoria:'Casa',dia:'',pagamento:'Transferência',obs:'21980957601'},
+        {id:5,section:'Fixas',status:'Pago',previsto:132.72,gasto:132.72,desc:'Claro celular + internet 📶',categoria:'Comunicação',dia:'15',pagamento:'Santander (auto)',obs:''},
+        {id:6,section:'Fixas',status:'Pago',previsto:60,gasto:60,desc:'Sala quartel 🍞',categoria:'Pessoal',dia:'1',pagamento:'Transferência',obs:'(21) 98230-5514'},
+        {id:7,section:'Fixas',status:'—',previsto:0,gasto:0,desc:'Celular vó 📶',categoria:'Família',dia:'18',pagamento:'Transferência',obs:''},
+        {id:8,section:'Fixas',status:'Pago',previsto:70,gasto:70,desc:'Muay Thai 🥊',categoria:'Esporte',dia:'10',pagamento:'Transferência',obs:'21969089651'},
+        {id:9,section:'Fixas',status:'—',previsto:0,gasto:0,desc:'Gran Faculdade 🧑🏻‍🎓',categoria:'Educação',dia:'10',pagamento:'',obs:''},
+        {id:10,section:'Fixas',status:'—',previsto:0,gasto:0,desc:'Seguro 🏍️',categoria:'Seguro',dia:'',pagamento:'',obs:''},
+        {id:11,section:'Variáveis',status:'Parcial',previsto:1200,gasto:1073.7,desc:'Mercado 🛒',categoria:'Alimentação',dia:'25',pagamento:'Transferência',obs:'comida&bebida festa'},
+        {id:12,section:'Variáveis',status:'Parcial',previsto:94,gasto:64.18,desc:'Combustível — moto 🏍️',categoria:'Transporte',dia:'',pagamento:'Transferência',obs:''},
+        {id:13,section:'Variáveis',status:'Pago',previsto:40.94,gasto:40.94,desc:'Combustível — carro 🚙',categoria:'Transporte',dia:'',pagamento:'Transferência',obs:''},
+        {id:14,section:'Variáveis',status:'Parcial',previsto:500,gasto:488.23,desc:'Lazer + comida na rua 🍔',categoria:'Lazer',dia:'',pagamento:'Transferência',obs:'moccelin235'},
+        {id:15,section:'Variáveis',status:'—',previsto:0,gasto:0,desc:'Farmácia 💊',categoria:'Saúde',dia:'',pagamento:'Transferência',obs:''},
+        {id:16,section:'Variáveis',status:'Parcial',previsto:390,gasto:77.9,desc:'Necessidades 🛍️',categoria:'Pessoal',dia:'',pagamento:'Transferência',obs:'enxada68,9'},
+        {id:17,section:'Variáveis',status:'Parcial',previsto:2100,gasto:96,desc:'Utilidades 🛍️',categoria:'Pessoal',dia:'',pagamento:'Transferência',obs:'Perfume presente vó'},
+        {id:18,section:'Variáveis',status:'—',previsto:0,gasto:0,desc:'Gastos — moto 🏍️',categoria:'Transporte',dia:'',pagamento:'Transferência',obs:''},
+        {id:19,section:'Variáveis',status:'—',previsto:0,gasto:0,desc:'Gastos — carro 🚙',categoria:'Transporte',dia:'',pagamento:'Transferência',obs:''},
+        {id:20,section:'Variáveis',status:'—',previsto:0,gasto:0,desc:'Condução 🚕',categoria:'Transporte',dia:'',pagamento:'Cartão Nu',obs:''},
+        {id:21,section:'Variáveis',status:'Parcial',previsto:95,gasto:65,desc:'Corte de cabelo💈',categoria:'Pessoal',dia:'',pagamento:'Transferência',obs:''},
+        {id:22,section:'Extras',status:'Pago',previsto:201,gasto:201,desc:'Fatura Itaú 💳',categoria:'Cartão',dia:'',pagamento:'Transferência',obs:'Tênis'},
+        {id:23,section:'Extras',status:'Pago',previsto:94.6,gasto:94.6,desc:'Fatura Nubank 💳',categoria:'Cartão',dia:'',pagamento:'Transferência',obs:'Planilha Breno 74,70 + Premiere 19,90'},
+        {id:24,section:'Extras',status:'Pago',previsto:500,gasto:500,desc:'Ajudar pai + afilhadas',categoria:'Família',dia:'',pagamento:'Transferência',obs:''},
+        {id:25,section:'Extras',status:'Pago',previsto:293.71,gasto:293.71,desc:'Licenciamento moto',categoria:'Transporte',dia:'',pagamento:'Transferência',obs:''},
+        {id:26,section:'Extras',status:'Pago',previsto:293.71,gasto:293.71,desc:'Licenciamento carro',categoria:'Transporte',dia:'',pagamento:'Transferência',obs:''},
+        {id:27,section:'Extras',status:'Pago',previsto:34,gasto:34,desc:'Ração',categoria:'Animais',dia:'',pagamento:'Transferência',obs:''},
+        {id:28,section:'Extras',status:'Pago',previsto:10,gasto:10,desc:'Oferta',categoria:'Doação',dia:'',pagamento:'Transferência',obs:''},
+        {id:29,section:'Extras',status:'Pago',previsto:346,gasto:346,desc:'Dívida Gisele',categoria:'Financeiro',dia:'',pagamento:'Transferência',obs:''}
+      ],
+      dinheiro: [
+        {id:1,local:'Espécie',tipo:'Caixa',valor:767,disp:'Disponível'},
+        {id:2,local:'Santander',tipo:'Conta',valor:0,disp:'Disponível'},
+        {id:3,local:'Nubank',tipo:'Conta',valor:5042.5,disp:'Disponível'},
+        {id:4,local:'',tipo:'Caixinha turbo',valor:800,disp:'Investido'},
+        {id:5,local:'',tipo:'Caixinha turbo',valor:0,disp:'Investido'},
+        {id:6,local:'Itaú',tipo:'Conta',valor:0,disp:'Disponível'},
+        {id:7,local:'Clear',tipo:'Investimentos',valor:500,disp:'Investido'}
+      ],
+      receitas: [
+        {id:1,origem:'FAB',valor:4529,obs:''},
+        {id:2,origem:'Vó',valor:600,obs:''},
+        {id:3,origem:'Vó',valor:100,obs:'presente perfume'}
+      ]
+    }
+  }
+};
+
+function loadData(){
+  try{
+    const raw = localStorage.getItem(STORAGE_KEY);
+    if(raw) return JSON.parse(raw);
+  }catch(e){}
+  return JSON.parse(JSON.stringify(INITIAL));
+}
+function saveData(){
+  try{ localStorage.setItem(STORAGE_KEY, JSON.stringify(data)); }catch(e){}
+}
+
+let data = loadData();
+let nextId = 100000;
+let expandedKeys = new Set();
+let currentScreen = 'resumo';
+
+const fmt = v => (Number(v)||0).toLocaleString('pt-BR',{style:'currency',currency:'BRL'});
+const escAttr = s => String(s??'').replace(/&/g,'&amp;').replace(/"/g,'&quot;');
+const SECTION_COLORS = {'Fixas':'var(--fixo)','Variáveis':'var(--variavel)','Extras':'var(--extra)'};
+const M = () => data.months[data.currentMonthKey];
+
+// ---------- screens ----------
+function setScreen(name){
+  currentScreen = name;
+  document.querySelectorAll('.screen').forEach(s=>s.classList.toggle('active', s.id==='screen-'+name));
+  document.querySelectorAll('.bottomnav button').forEach(b=>b.classList.toggle('active', b.dataset.screen===name));
+  window.scrollTo(0,0);
+}
+
+// ---------- months ----------
+function populateMonthSelect(){
+  const sel = document.getElementById('monthSelect');
+  const entries = Object.entries(data.months);
+  sel.innerHTML = entries.map(([k,m])=>`<option value="${k}" ${k===data.currentMonthKey?'selected':''}>${escAttr(m.label)}</option>`).join('');
+}
+function switchMonth(key){
+  data.currentMonthKey = key;
+  expandedKeys = new Set();
+  saveData(); render();
+}
+function suggestNextLabel(){
+  const prev = M().label.toLowerCase();
+  const idx = MESES_PT.findIndex(m=>prev.includes(m));
+  const yearMatch = M().label.match(/\d{4}/);
+  let year = yearMatch ? parseInt(yearMatch[0]) : new Date().getFullYear();
+  if(idx===-1) return '';
+  let next = idx+1, nextYear = year;
+  if(next>11){ next=0; nextYear++; }
+  const name = MESES_PT[next];
+  return name.charAt(0).toUpperCase()+name.slice(1)+' '+nextYear;
+}
+function openNewMonth(){
+  document.getElementById('newMonthForm').style.display='flex';
+  document.getElementById('newMonthLabel').value = suggestNextLabel();
+}
+function closeNewMonth(){ document.getElementById('newMonthForm').style.display='none'; }
+function createNewMonth(){
+  const label = document.getElementById('newMonthLabel').value.trim() || 'Novo mês';
+  const prev = M();
+  const key = 'm'+Date.now();
+  data.months[key] = {
+    label,
+    updatedAt: new Date().toISOString().slice(0,10),
+    lancamentos: prev.lancamentos.map(l=>({...l,status:'—',gasto:0})),
+    dinheiro: prev.dinheiro.map(d=>({...d})),
+    receitas: []
+  };
+  data.currentMonthKey = key;
+  expandedKeys = new Set();
+  closeNewMonth();
+  saveData(); render(); setScreen('resumo');
+}
+
+// ---------- reset ----------
+let confirmingReset = false;
+function askReset(){ confirmingReset = true; renderResetbar(); }
+function cancelReset(){ confirmingReset = false; renderResetbar(); }
+function resetData(){
+  data = JSON.parse(JSON.stringify(INITIAL));
+  expandedKeys = new Set();
+  confirmingReset = false;
+  saveData(); render();
+}
+function renderResetbar(){
+  const el = document.getElementById('resetbar');
+  if(confirmingReset){
+    el.innerHTML = `<div class="resetconfirm">Isso apaga TODOS os meses e volta ao estado original.
+      <button class="yes" onclick="resetData()">sim, restaurar</button>
+      <button class="no" onclick="cancelReset()">cancelar</button></div>`;
+  } else {
+    el.innerHTML = `<button class="resetbtn" onclick="askReset()">restaurar tudo ao estado original</button>`;
+  }
+}
+
+function toggleExpand(list,id){
+  const key = list+'-'+id;
+  if(expandedKeys.has(key)) expandedKeys.delete(key); else expandedKeys.add(key);
+  render();
+}
+
+// ---------- full render ----------
+function render(){
+  populateMonthSelect();
+  updateStats();
+  renderLancamentos();
+  renderDinheiro();
+  renderReceitas();
+  renderResetbar();
+}
+
+// ---------- lightweight update (typing) ----------
+function updLive(list,id,key,val){
+  const item = M()[list].find(x=>x.id===id);
+  if(!item) return;
+  const numeric = ['previsto','gasto','valor'].includes(key);
+  item[key] = numeric ? (parseFloat(val)||0) : val;
+  saveData();
+  updateStats();
+  updateCompactRow(list,id);
+}
+
+function updateCompactRow(list,id){
+  const row = document.querySelector(`.item[data-list="${list}"][data-id="${id}"] .citem`);
+  if(!row) return;
+  const item = M()[list].find(x=>x.id===id);
+  if(!item) return;
+  if(list==='lancamentos'){
+    const falta = Number(item.previsto||0) - Number(item.gasto||0);
+    row.querySelector('.cdesc').textContent = item.desc;
+    row.querySelector('.cvals').textContent = `${fmt(item.gasto)} / ${fmt(item.previsto)}`;
+    const badge = row.querySelector('.cfalta');
+    badge.textContent = falta<=0 ? 'ok' : fmt(falta);
+    badge.className = 'cfalta ' + (falta<=0?'ok':'pend');
+  } else if(list==='dinheiro'){
+    row.querySelector('.cdesc').textContent = item.local || item.tipo || '(sem nome)';
+    row.querySelector('.cvals').textContent = fmt(item.valor);
+    row.querySelector('.cdot').style.background = item.disp==='Disponível' ? 'var(--accent)' : 'var(--warn)';
+  } else if(list==='receitas'){
+    row.querySelector('.cdesc').textContent = item.origem || '(sem origem)';
+    row.querySelector('.cvals').textContent = fmt(item.valor);
+  }
+}
+
+function updateStats(){
+  const mo = M();
+  const previstoTot = mo.lancamentos.reduce((s,l)=>s+Number(l.previsto||0),0);
+  const gastoTot = mo.lancamentos.reduce((s,l)=>s+Number(l.gasto||0),0);
+  const faltaGastar = previstoTot - gastoTot;
+  const saldoDisponivel = mo.dinheiro.filter(d=>d.disp==='Disponível').reduce((s,d)=>s+Number(d.valor||0),0);
+  const sobraProjetada = saldoDisponivel - faltaGastar;
+  const receitasTot = mo.receitas.reduce((s,r)=>s+Number(r.valor||0),0);
+
+  const hero = document.getElementById('heroSobra');
+  hero.className = 'hero ' + (sobraProjetada>=0?'pos':'neg');
+  hero.innerHTML = `
+    <div class="l">Sobra projetada no fim do mês</div>
+    <div class="v">${fmt(sobraProjetada)}</div>
+    <div class="hint">Saldo disponível hoje menos o que ainda falta gastar</div>
+  `;
+  document.getElementById('statCards').innerHTML = `
+    <div class="stat"><div class="l">Saldo disponível</div><div class="v">${fmt(saldoDisponivel)}</div></div>
+    <div class="stat"><div class="l">Falta gastar</div><div class="v">${fmt(faltaGastar)}</div></div>
+    <div class="stat"><div class="l">Receitas do mês</div><div class="v">${fmt(receitasTot)}</div></div>
+    <div class="stat"><div class="l">Orçamento previsto</div><div class="v">${fmt(previstoTot)}</div></div>
+  `;
+  document.getElementById('lancTot').textContent = `${fmt(gastoTot)} / ${fmt(previstoTot)}`;
+  document.getElementById('dinheiroTot').textContent = fmt(mo.dinheiro.reduce((s,d)=>s+Number(d.valor||0),0));
+  document.getElementById('receitasTot').textContent = fmt(receitasTot);
+  renderCategorias();
+}
+
+const CAT_PALETTE = ['#5c6bc0','#c9862a','#2f6f4f','#a3312c','#8e5cc9','#2a9d9d','#c94f7c','#7a8c3f'];
+
+function renderCategorias(){
+  const el = document.getElementById('categorias');
+  const totals = {};
+  M().lancamentos.forEach(l=>{
+    const g = Number(l.gasto||0);
+    if(g<=0) return;
+    const cat = (l.categoria||'').trim() || 'Sem categoria';
+    totals[cat] = (totals[cat]||0) + g;
+  });
+  const entries = Object.entries(totals).sort((a,b)=>b[1]-a[1]);
+  if(entries.length===0){
+    el.innerHTML = '<div style="color:var(--muted); font-size:0.85rem;">Nenhum gasto registrado ainda.</div>';
+    return;
+  }
+  const max = entries[0][1];
+  el.innerHTML = entries.map(([cat,val],i)=>`
+    <div class="catbar-row">
+      <div class="catbar-label"><span class="cat">${escAttr(cat)}</span><span class="val">${fmt(val)}</span></div>
+      <div class="catbar-track"><div class="catbar-fill" style="width:${(val/max*100).toFixed(1)}%; background:${CAT_PALETTE[i%CAT_PALETTE.length]}"></div></div>
+    </div>
+  `).join('');
+}
+
+function renderLancamentos(){
+  const el = document.getElementById('lancamentos');
+  el.innerHTML='';
+  ['Fixas','Variáveis','Extras'].forEach(sec=>{
+    const items = M().lancamentos.filter(l=>l.section===sec);
+    const grp = document.createElement('div');
+    grp.innerHTML = `<div class="grouphead"><span class="dot" style="background:${SECTION_COLORS[sec]}"></span>${sec}</div>`;
+    el.appendChild(grp);
+    items.forEach(l=>el.appendChild(lancRow(l)));
+    const addBtn = document.createElement('button');
+    addBtn.className='add-btn';
+    addBtn.textContent='+ adicionar em '+sec;
+    addBtn.onclick=()=>addLancamento(sec);
+    el.appendChild(addBtn);
+  });
+}
+
+function lancRow(l){
+  const falta = Number(l.previsto||0) - Number(l.gasto||0);
+  const isOpen = expandedKeys.has('lancamentos-'+l.id);
+  const div = document.createElement('div');
+  div.className='item';
+  div.setAttribute('data-list','lancamentos');
+  div.setAttribute('data-id',l.id);
+  let html = `
+    <div class="citem" onclick="toggleExpand('lancamentos',${l.id})">
+      <span class="cdot" style="background:${SECTION_COLORS[l.section]}"></span>
+      <span class="cdesc">${escAttr(l.desc)}</span>
+      <span class="cvals">${fmt(l.gasto)} / ${fmt(l.previsto)}</span>
+      <span class="cfalta ${falta<=0?'ok':'pend'}">${falta<=0?'ok':fmt(falta)}</span>
+      <span class="cchev">${isOpen?'▾':'▸'}</span>
+    </div>`;
+  if(isOpen){
+    html += `
+    <div class="expanded-body">
+      <div class="row">
+        <div class="field wide"><label>Descrição</label><input value="${escAttr(l.desc)}" oninput="updLive('lancamentos',${l.id},'desc',this.value)"></div>
+      </div>
+      <div class="row">
+        <div class="field"><label>Status</label>
+          <select onchange="updLive('lancamentos',${l.id},'status',this.value)">
+            ${['Pago','Parcial','—'].map(s=>`<option ${s===l.status?'selected':''}>${s}</option>`).join('')}
+          </select>
+        </div>
+        <div class="field"><label>Previsto</label><input type="number" step="0.01" value="${l.previsto}" oninput="updLive('lancamentos',${l.id},'previsto',this.value)"></div>
+        <div class="field"><label>Gasto</label><input type="number" step="0.01" value="${l.gasto}" oninput="updLive('lancamentos',${l.id},'gasto',this.value)"></div>
+      </div>
+      <div class="row">
+        <div class="field"><label>Categoria</label><input value="${escAttr(l.categoria)}" oninput="updLive('lancamentos',${l.id},'categoria',this.value)"></div>
+        <div class="field"><label>Dia/venc.</label><input value="${escAttr(l.dia)}" oninput="updLive('lancamentos',${l.id},'dia',this.value)"></div>
+        <div class="field wide"><label>Pagamento</label><input value="${escAttr(l.pagamento)}" oninput="updLive('lancamentos',${l.id},'pagamento',this.value)"></div>
+      </div>
+      <div class="row">
+        <div class="field wide"><label>Observação</label><input value="${escAttr(l.obs)}" oninput="updLive('lancamentos',${l.id},'obs',this.value)"></div>
+        <button class="del" onclick="removeItem('lancamentos',${l.id})">✕ excluir</button>
+      </div>
+    </div>`;
+  }
+  div.innerHTML = html;
+  return div;
+}
+
+function renderDinheiro(){
+  const el = document.getElementById('dinheiro');
+  el.innerHTML='';
+  M().dinheiro.forEach(d=>el.appendChild(dinheiroRow(d)));
+}
+function dinheiroRow(d){
+  const isOpen = expandedKeys.has('dinheiro-'+d.id);
+  const div = document.createElement('div');
+  div.className='item';
+  div.setAttribute('data-list','dinheiro');
+  div.setAttribute('data-id',d.id);
+  let html = `
+    <div class="citem" onclick="toggleExpand('dinheiro',${d.id})">
+      <span class="cdot" style="background:${d.disp==='Disponível'?'var(--accent)':'var(--warn)'}"></span>
+      <span class="cdesc">${escAttr(d.local || d.tipo || '(sem nome)')}</span>
+      <span class="cvals">${fmt(d.valor)}</span>
+      <span class="cchev">${isOpen?'▾':'▸'}</span>
+    </div>`;
+  if(isOpen){
+    html += `
+    <div class="expanded-body">
+      <div class="row">
+        <div class="field"><label>Local</label><input value="${escAttr(d.local)}" oninput="updLive('dinheiro',${d.id},'local',this.value)"></div>
+        <div class="field"><label>Tipo</label><input value="${escAttr(d.tipo)}" oninput="updLive('dinheiro',${d.id},'tipo',this.value)"></div>
+      </div>
+      <div class="row">
+        <div class="field"><label>Valor</label><input type="number" step="0.01" value="${d.valor}" oninput="updLive('dinheiro',${d.id},'valor',this.value)"></div>
+        <div class="field"><label>Disponibilidade</label>
+          <select onchange="updLive('dinheiro',${d.id},'disp',this.value)">
+            ${['Disponível','Investido'].map(s=>`<option ${s===d.disp?'selected':''}>${s}</option>`).join('')}
+          </select>
+        </div>
+      </div>
+      <div class="row"><button class="del" onclick="removeItem('dinheiro',${d.id})">✕ excluir</button></div>
+    </div>`;
+  }
+  div.innerHTML = html;
+  return div;
+}
+
+function renderReceitas(){
+  const el = document.getElementById('receitas');
+  el.innerHTML='';
+  M().receitas.forEach(r=>el.appendChild(receitaRow(r)));
+}
+function receitaRow(r){
+  const isOpen = expandedKeys.has('receitas-'+r.id);
+  const div = document.createElement('div');
+  div.className='item';
+  div.setAttribute('data-list','receitas');
+  div.setAttribute('data-id',r.id);
+  let html = `
+    <div class="citem" onclick="toggleExpand('receitas',${r.id})">
+      <span class="cdot" style="background:var(--accent)"></span>
+      <span class="cdesc">${escAttr(r.origem || '(sem origem)')}</span>
+      <span class="cvals">${fmt(r.valor)}</span>
+      <span class="cchev">${isOpen?'▾':'▸'}</span>
+    </div>`;
+  if(isOpen){
+    html += `
+    <div class="expanded-body">
+      <div class="row">
+        <div class="field"><label>Origem</label><input value="${escAttr(r.origem)}" oninput="updLive('receitas',${r.id},'origem',this.value)"></div>
+        <div class="field"><label>Valor</label><input type="number" step="0.01" value="${r.valor}" oninput="updLive('receitas',${r.id},'valor',this.value)"></div>
+      </div>
+      <div class="row">
+        <div class="field wide"><label>Observação</label><input value="${escAttr(r.obs)}" oninput="updLive('receitas',${r.id},'obs',this.value)"></div>
+        <button class="del" onclick="removeItem('receitas',${r.id})">✕ excluir</button>
+      </div>
+    </div>`;
+  }
+  div.innerHTML = html;
+  return div;
+}
+
+function removeItem(list,id){
+  M()[list] = M()[list].filter(x=>x.id!==id);
+  expandedKeys.delete(list+'-'+id);
+  saveData(); render();
+}
+function addLancamento(section){
+  const id = ++nextId;
+  M().lancamentos.push({id,section,status:'—',previsto:0,gasto:0,desc:'Novo item',categoria:'',dia:'',pagamento:'',obs:''});
+  expandedKeys.add('lancamentos-'+id);
+  saveData(); render();
+}
+function addDinheiro(){
+  const id = ++nextId;
+  M().dinheiro.push({id,local:'',tipo:'',valor:0,disp:'Disponível'});
+  expandedKeys.add('dinheiro-'+id);
+  saveData(); render();
+}
+function addReceita(){
+  const id = ++nextId;
+  M().receitas.push({id,origem:'',valor:0,obs:''});
+  expandedKeys.add('receitas-'+id);
+  saveData(); render();
+}
+
+render();
+</script>
+</body>
+</html>
